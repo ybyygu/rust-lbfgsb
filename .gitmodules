@@ -1,0 +1,3 @@
+[submodule "L-BFGS-B-C"]
+	path = lib
+	url = https://github.com/stephenbeckr/L-BFGS-B-C.git
