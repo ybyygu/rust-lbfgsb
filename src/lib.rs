@@ -34,6 +34,10 @@ extern "C" {
 }
 // include:1 ends here
 
+// [[file:~/Workspace/Programming/rust-libs/l-bfgs-b-c/lbfgsb.note::*mods][mods:1]]
+mod lbfgsb;
+// mods:1 ends here
+
 // [[file:~/Workspace/Programming/rust-libs/l-bfgs-b-c/lbfgsb.note::*util][util:1]]
 /// Compute function value f for the sample problem.
 ///
@@ -132,14 +136,17 @@ impl Default for LbfgsbParameter {
 // [[file:~/Workspace/Programming/rust-libs/l-bfgs-b-c/lbfgsb.note::*minimize][minimize:1]]
 /// # Parameters
 ///
-fn minimize_lbfgsb(
+fn minimize_lbfgsb<E>(
     x: &mut [f64],
     l: &[f64],
     u: &[f64],
     g: &mut [f64],
     nbd: &[i64],
     param: &LbfgsbParameter,
-) {
+    mut eval_fn: E,
+) where
+    E: FnMut(&[f64], &mut [f64]) -> f64,
+{
     let n = x.len();
     let m = param.m;
 
@@ -257,8 +264,8 @@ fn minimize_lbfgsb(
                 // the minimization routine has returned to request the
                 // function f and gradient g values at the current x.
                 // Compute function value f for the sample problem.
-                f = evaluate(x, g);
-                // go back to the minimization routine.
+                f = eval_fn(x, g);
+            // go back to the minimization routine.
             } else if task == NEW_X as i64 {
                 // the minimization routine has returned with a new iterate, and we have
                 // opted to continue the iteration.
@@ -324,6 +331,6 @@ fn test_lbfgsb() {
 
     // ------- the beginning of the loop ----------
     let param = LbfgsbParameter::default();
-    minimize_lbfgsb(&mut x, &l, &u, &mut g, &nbd, &param);
+    minimize_lbfgsb(&mut x, &l, &u, &mut g, &nbd, &param, evaluate);
 }
 // test:1 ends here
