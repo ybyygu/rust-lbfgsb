@@ -7,7 +7,9 @@ mod bindings {
 }
 // pub use bindings::*;
 
-use bindings::{NEW_X, START, FG, FG_END, integer, logical};
+use bindings::{integer, logical, FG, FG_END, NEW_X, START};
+
+// update signature to remove mut access from const parameters
 extern "C" {
     pub fn setulb(
         n: *const integer,
@@ -32,46 +34,122 @@ extern "C" {
 }
 // include:1 ends here
 
-// [[file:~/Workspace/Programming/rust-libs/l-bfgs-b-c/lbfgsb.note::*test][test:1]]
+// [[file:~/Workspace/Programming/rust-libs/l-bfgs-b-c/lbfgsb.note::*util][util:1]]
+/// Compute function value f for the sample problem.
+///
+/// Evaluate f(x) and g(x) at current `x`.
+fn evaluate(x: &[f64], g: &mut [f64]) -> f64 {
+    let n = x.len();
+    let mut d1 = x[0] - 1.;
+    let mut f = d1 * d1 * 0.25;
+    for i in (2..=n) {
+        /* Computing 2nd power */
+        let d2 = x[i - 2];
+        /* Computing 2nd power */
+        d1 = x[i - 1] - d2 * d2;
+        f += d1 * d1;
+    }
+    f *= 4.;
+
+    // Compute gradient g for the sample problem.
+    /* Computing 2nd power */
+    let mut d1 = x[0];
+    let mut t1 = x[1] - d1 * d1;
+    g[0] = (x[0] - 1.) * 2. - x[0] * 16. * t1;
+
+    for i in (2..=n - 1) {
+        let t2 = t1;
+        /* Computing 2nd power */
+        d1 = x[i - 1];
+        t1 = x[i] - d1 * d1;
+        g[i - 1] = t2 * 8. - x[i - 1] * 16. * t1;
+    }
+    g[n - 1] = t1 * 8.;
+
+    f
+}
+
 // #define IS_FG(x) ( ((x)>=FG) ?  ( ((x)<=FG_END) ? 1 : 0 ) : 0 )
 fn is_fg(task: i64) -> bool {
     let task = task as u32;
-    if task >= FG {
-        if task <= FG_END {
-            return true;
-        }
-    }
-    false
+    task >= FG && task <= FG_END
+}
+// util:1 ends here
+
+// [[file:~/Workspace/Programming/rust-libs/l-bfgs-b-c/lbfgsb.note::*param][param:1]]
+struct LbfgsbParameter {
+    /// On entry m is the maximum number of variable metric corrections allowed
+    /// in the limited memory matrix.
+    m: usize,
+
+    /// The tolerances in the stopping criteria for function value.
+    ///
+    /// On entry factr >= 0 is specified by the user. The iteration will stop
+    /// when
+    ///
+    ///   (f^k - f^{k+1})/max{|f^k|,|f^{k+1}|,1} <= factr*epsmch
+    ///
+    /// where epsmch is the machine precision, which is automatically generated
+    /// by the code.
+    factr: f64,
+
+    /// The tolerances in the stopping criteria for gradient.
+    ///
+    /// On entry pgtol >= 0 is specified by the user. The iteration will stop
+    /// when
+    ///
+    ///   max{|proj g_i | i = 1, ..., n} <= pgtol
+    ///
+    /// where pg_i is the ith component of the projected gradient.
+    pgtol: f64,
+
+    // iprint controls the frequency and type of output generated:
+    //
+    //    iprint<0    no output is generated;
+    //    iprint=0    print only one line at the last iteration;
+    //    0<iprint<99 print also f and |proj g| every iprint iterations;
+    //    iprint=99   print details of every iteration except n-vectors;
+    //    iprint=100  print also the changes of active set and final x;
+    //    iprint>100  print details of every iteration including x and g;
+    //
+    // When iprint > 0, the file iterate.dat will be created to summarize the
+    // iteration.
+    iprint: i64,
 }
 
-#[test]
-fn test_lbfgsb() {
-    // Local variables
-    //  static double f, g[1024];
-    //  static double l[1024];
-    //  static double u[1024], x[1024], t1, t2, wa[43251];
-    // for the value of the function at x
-    let mut f = 0f64;
-    // for the value of the gradient at x.
-    let mut g = [0f64; 1024];
-    let mut l = [0f64; 1024];
-    let mut u = [0f64; 1024];
-    let mut x = [0f64; 1024];
-    let mut wa = [0f64; 43251];
-    let mut t1 = 0f64;
-    let mut t2 = 0f64;
+impl Default for LbfgsbParameter {
+    fn default() -> Self {
+        Self {
+            m: 5,
+            factr: 1E7,
+            pgtol: 1E-5,
+            iprint: 1,
+        }
+    }
+}
+// param:1 ends here
 
-    // nbd represents the type of bounds imposed on the
-    // variables, and must be specified as follows:
-    //     nbd(i)=0 if x(i) is unbounded,
-    //            1 if x(i) has only a lower bound,
-    //            2 if x(i) has both lower and upper bounds, and
-    //            3 if x(i) has only an upper bound.
-    // static integer nbd[1024], iwa[3072];
-    let mut nbd = [0; 1024];
+// [[file:~/Workspace/Programming/rust-libs/l-bfgs-b-c/lbfgsb.note::*minimize][minimize:1]]
+/// # Parameters
+///
+fn minimize_lbfgsb(
+    x: &mut [f64],
+    l: &[f64],
+    u: &[f64],
+    g: &mut [f64],
+    nbd: &[i64],
+    param: &LbfgsbParameter,
+) {
+    let n = x.len();
+    let m = param.m;
 
+    // 1. Allocate internal workspace arrays
+
+    // wa is a double precision working array of length
+    //   (2mmax + 5)nmax + 12mmax^2 + 12mmax.
+    let mut wa = vec![0.0; 2 * m * n + 5 * n + 11 * m * m + 8 * m];
     // iwa is an integer working array of length 3nmax.
-    let mut iwa = [0; 3072];
+    let mut iwa = vec![0; 3 * n];
 
     // csave is a working string of characters of length 60.
     // static char csave[60];
@@ -142,156 +220,110 @@ fn test_lbfgsb() {
     //   If lsave(2) = .true.  then  the problem is constrained;
     //
     //   If lsave(3) = .true. then each variable has upper and lower bounds;
-    // let mut lsave = [false; 4];
     let mut lsave = [0; 4];
 
-    // We wish to have output at every iteration.
-    //
-    // iprint is an integer variable that must be set by the user.
-    // It controls the frequency and type of output generated:
-    //  iprint<0    no output is generated;
-    //  iprint=0    print only one line at the last iteration;
-    //  0<iprint<99 print also f and |proj g| every iprint iterations;
-    //  iprint=99   print details of every iteration except n-vectors;
-    //  iprint=100  print also the changes of active set and final x;
-    //  iprint>100  print details of every iteration including x and g;
-    //
-    // When iprint > 0, the file iterate.dat will be created to summarize the
-    // iteration.
-    let iprint = 1_i64; // We specify the tolerances in the stopping criteria.
-                        //
-                        // factr is a double precision variable. On entry factr >= 0 is specified by
-                        // the user. The iteration will stop when
-                        //
-                        //   (f^k - f^{k+1})/max{|f^k|,|f^{k+1}|,1} <= factr*epsmch
-                        //
-                        // where epsmch is the machine precision, which is automatically generated
-                        // by the code. Typical values for factr: 1.d+12 for low accuracy; 1.d+7 for
-                        // moderate accuracy; 1.d+1 for extremely high accuracy.
-    let factr: f64 = 1e7;
+    // We start the iteration by initializing task.
+    // *task = (integer)START;
+    let mut task: i64 = START.into();
 
-    // On entry pgtol >= 0 is specified by the user. The iteration will stop
-    // when
-    //
-    //           max{|proj g_i | i = 1, ..., n} <= pgtol
-    //
-    // where pg_i is the ith component of the projected gradient. On exit pgtol
-    // is unchanged.
-    let pgtol: f64 = 1e-5;
+    // 2. the beginning of the loop
+    // for the value of the function at x
+    let mut f = 0.0;
+    loop {
+        // the call to the L-BFGS-B code
+        unsafe {
+            setulb(
+                &(n as i64),        //x
+                &(m as i64),        //x
+                x.as_mut_ptr(),     //x
+                l.as_ptr(),         //x
+                u.as_ptr(),         //x
+                nbd.as_ptr(),       //x
+                &mut f,             //x
+                g.as_mut_ptr(),     //x
+                &param.factr,       //x
+                &param.pgtol,       //x
+                wa.as_mut_ptr(),    //x
+                iwa.as_mut_ptr(),   //x
+                &mut task,          //x
+                &param.iprint,      //x
+                csave.as_mut_ptr(), //x
+                lsave.as_mut_ptr(), //x
+                isave.as_mut_ptr(), //x
+                dsave.as_mut_ptr(), //x
+            );
 
-    // We specify the dimension n of the sample problem and the number m of
-    // limited memory corrections stored. (n and m should not exceed the limits
-    // nmax and mmax respectively.)
-    let n = 25;
-    let m = 5;
+            if is_fg(task) {
+                // the minimization routine has returned to request the
+                // function f and gradient g values at the current x.
+                // Compute function value f for the sample problem.
+                f = evaluate(x, g);
+                // go back to the minimization routine.
+            } else if task == NEW_X as i64 {
+                // the minimization routine has returned with a new iterate, and we have
+                // opted to continue the iteration.
+            } else {
+                // If task is neither FG nor NEW_X we terminate execution.
+                break;
+            }
+        }
+    }
+}
+// minimize:1 ends here
+
+// [[file:~/Workspace/Programming/rust-libs/l-bfgs-b-c/lbfgsb.note::*test][test:1]]
+#[test]
+fn test_lbfgsb() {
+    const N: usize = 25;
+    // for the value of the gradient at x.
+    let mut g = [0f64; N];
+    let mut x = [0f64; N];
+
+    // nbd represents the type of bounds imposed on the
+    // variables, and must be specified as follows:
+    //     nbd(i)=0 if x(i) is unbounded,
+    //            1 if x(i) has only a lower bound,
+    //            2 if x(i) has both lower and upper bounds, and
+    //            3 if x(i) has only an upper bound.
+    let mut nbd = [0; N];
 
     // We now provide nbd which defines the bounds on the variables:
     // - l   specifies the lower bounds,
     // - u   specifies the upper bounds.
+    //
     // First set bounds on the odd-numbered variables.
-
-    for i in (1..=n).step_by(2) {
+    //
+    // nbd is an integer array of dimension n.
+    //   On entry nbd represents the type of bounds imposed on the
+    //     variables, and must be specified as follows:
+    //     nbd(i)=0 if x(i) is unbounded,
+    //            1 if x(i) has only a lower bound,
+    //            2 if x(i) has both lower and upper bounds, and
+    //            3 if x(i) has only an upper bound.
+    //   On exit nbd is unchanged.
+    let mut l = [0f64; N];
+    let mut u = [0f64; N];
+    for i in (1..=N).step_by(2) {
         nbd[i - 1] = 2;
         l[i - 1] = 1.;
         u[i - 1] = 100.;
     }
-
     // Next set bounds on the even-numbered variables.
-    for i in (2..=n).step_by(2) {
+    for i in (2..=N).step_by(2) {
         nbd[i - 1] = 2;
         l[i - 1] = -100.;
         u[i - 1] = 100.;
     }
 
     // We now define the starting point.
-    for i in (1..=n) {
+    for i in (1..=N) {
         x[i - 1] = 3.;
     }
     println!("     Solving sample problem (Rosenbrock test fcn).");
     println!("      (f = 0.0 at the optimal solution.)");
 
-    // We start the iteration by initializing task.
-    // *task = (integer)START;
-    let mut task: i64 = START.into();
-
     // ------- the beginning of the loop ----------
-
-    // L111:
-    // This is the call to the L-BFGS-B code.
-    // FIXME: remove
-    let _n = n as i64;
-    let _m = m as i64;
-    while true {
-        unsafe {
-            setulb(
-                &_n,                //x
-                &_m,                //x
-                x.as_mut_ptr(),     //x
-                l.as_ptr(),     //x
-                u.as_ptr(),     //x
-                nbd.as_ptr(),   //x
-                &mut f,             //x
-                g.as_mut_ptr(),     //x
-                &factr,             //x
-                &pgtol,             //x
-                wa.as_mut_ptr(),        //x
-                iwa.as_mut_ptr(),   //x
-                &mut task,          //x
-                &iprint,            //x
-                csave.as_mut_ptr(), //x
-                lsave.as_mut_ptr(), //x
-                isave.as_mut_ptr(), //x
-                dsave.as_mut_ptr(), //x
-            );
-        }
-
-        // if (s_cmp(task, "FG", (ftnlen)2, (ftnlen)2) == 0) {
-        if is_fg(task) {
-            // the minimization routine has returned to request the
-            // function f and gradient g values at the current x.
-            // Compute function value f for the sample problem.
-
-            // Computing 2nd power
-            let mut d1 = x[0] - 1.;
-            f = d1 * d1 * 0.25;
-            for i in (2..=n) {
-                /* Computing 2nd power */
-                let d2 = x[i - 2];
-                /* Computing 2nd power */
-                d1 = x[i - 1] - d2 * d2;
-                f += d1 * d1;
-            }
-
-            f *= 4.;
-            // Compute gradient g for the sample problem.
-            /* Computing 2nd power */
-            let mut d1 = x[0];
-            t1 = x[1] - d1 * d1;
-            g[0] = (x[0] - 1.) * 2. - x[0] * 16. * t1;
-
-            for i in (2..=n - 1) {
-                t2 = t1;
-                /* Computing 2nd power */
-                d1 = x[i - 1];
-                t1 = x[i] - d1 * d1;
-                g[i - 1] = t2 * 8. - x[i - 1] * 16. * t1;
-            }
-            g[n - 1] = t1 * 8.;
-            // go back to the minimization routine.
-            continue;
-        }
-
-        if task == NEW_X as i64 {
-            continue;
-        }
-        // the minimization routine has returned with a new iterate, and we have
-        // opted to continue the iteration.
-        //
-        // ---------- the end of the loop -------------
-        //
-        // If task is neither FG nor NEW_X we terminate execution.
-        //s_stop("", (ftnlen)0);
-        break;
-    }
+    let param = LbfgsbParameter::default();
+    minimize_lbfgsb(&mut x, &l, &u, &mut g, &nbd, &param);
 }
 // test:1 ends here
