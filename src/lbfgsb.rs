@@ -331,6 +331,17 @@ where
 // state:1 ends here
 
 // [[file:~/Workspace/Programming/rust-libs/l-bfgs-b-c/lbfgsb.note::*pub][pub:1]]
+/// Minimize a scalar function of one or more variables using the L-BFGS-B
+/// algorithm.
+///
+/// # Parameters
+///
+/// - bounds: a slice of tuple setting lower and upper bounds.
+/// - eval_fn: a closure evaluating f(x) and g(x). Returning Err value will cancel minimization.
+///
+/// # Return
+///
+/// - Returns final state containing x, f(x), g(x).
 pub fn lbfgsb<E>(x: Vec<f64>, bounds: &[(f64, f64)], eval_fn: E) -> Result<LbfgsbState<E>>
 where
     E: FnMut(&[f64], &mut [f64]) -> Result<f64>,
