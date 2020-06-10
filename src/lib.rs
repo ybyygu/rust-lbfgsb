@@ -1,7 +1,35 @@
 // [[file:~/Workspace/Programming/rust-libs/l-bfgs-b-c/lbfgsb.note::*include][include:1]]
 #![allow(nonstandard_style)]
 
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+#[allow(clippy::all)]
+mod bindings {
+    include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+}
+// pub use bindings::*;
+
+use bindings::{NEW_X, START, FG, FG_END, integer, logical};
+extern "C" {
+    pub fn setulb(
+        n: *const integer,
+        m: *const integer,
+        x: *mut f64,
+        l: *const f64,
+        u: *const f64,
+        nbd: *const integer,
+        f: *mut f64,
+        g: *mut f64,
+        factr: *const f64,
+        pgtol: *const f64,
+        wa: *mut f64,
+        iwa: *mut integer,
+        task: *mut integer,
+        iprint: *const integer,
+        csave: *mut integer,
+        lsave: *mut logical,
+        isave: *mut integer,
+        dsave: *mut f64,
+    ) -> ::std::os::raw::c_int;
+}
 // include:1 ends here
 
 // [[file:~/Workspace/Programming/rust-libs/l-bfgs-b-c/lbfgsb.note::*test][test:1]]
@@ -29,7 +57,7 @@ fn test_lbfgsb() {
     let mut l = [0f64; 1024];
     let mut u = [0f64; 1024];
     let mut x = [0f64; 1024];
-    let wa = [0f64; 43251];
+    let mut wa = [0f64; 43251];
     let mut t1 = 0f64;
     let mut t2 = 0f64;
 
@@ -130,16 +158,16 @@ fn test_lbfgsb() {
     //
     // When iprint > 0, the file iterate.dat will be created to summarize the
     // iteration.
-    let iprint = 1; // We specify the tolerances in the stopping criteria.
-                    //
-                    // factr is a double precision variable. On entry factr >= 0 is specified by
-                    // the user. The iteration will stop when
-                    //
-                    //   (f^k - f^{k+1})/max{|f^k|,|f^{k+1}|,1} <= factr*epsmch
-                    //
-                    // where epsmch is the machine precision, which is automatically generated
-                    // by the code. Typical values for factr: 1.d+12 for low accuracy; 1.d+7 for
-                    // moderate accuracy; 1.d+1 for extremely high accuracy.
+    let iprint = 1_i64; // We specify the tolerances in the stopping criteria.
+                        //
+                        // factr is a double precision variable. On entry factr >= 0 is specified by
+                        // the user. The iteration will stop when
+                        //
+                        //   (f^k - f^{k+1})/max{|f^k|,|f^{k+1}|,1} <= factr*epsmch
+                        //
+                        // where epsmch is the machine precision, which is automatically generated
+                        // by the code. Typical values for factr: 1.d+12 for low accuracy; 1.d+7 for
+                        // moderate accuracy; 1.d+1 for extremely high accuracy.
     let factr: f64 = 1e7;
 
     // On entry pgtol >= 0 is specified by the user. The iteration will stop
@@ -191,32 +219,25 @@ fn test_lbfgsb() {
     // L111:
     // This is the call to the L-BFGS-B code.
     // FIXME: remove
-    let mut _n = n as i64;
-    let mut _m = m as i64;
-    let mut factr = factr;
-    let mut pgtol = pgtol;
-    let mut iprint = iprint as i64;
-    let mut l = l.clone();
-    let mut u = u.clone();
-    let mut nbd = nbd.clone();
-    let mut wa = wa.clone();
+    let _n = n as i64;
+    let _m = m as i64;
     while true {
         unsafe {
             setulb(
-                &mut _n,            //x
-                &mut _m,            //x
+                &_n,                //x
+                &_m,                //x
                 x.as_mut_ptr(),     //x
-                l.as_mut_ptr(),     //x
-                u.as_mut_ptr(),     //x
-                nbd.as_mut_ptr(),   //x
+                l.as_ptr(),     //x
+                u.as_ptr(),     //x
+                nbd.as_ptr(),   //x
                 &mut f,             //x
                 g.as_mut_ptr(),     //x
-                &mut factr,         //x
-                &mut pgtol,         //x
-                wa.as_mut_ptr(),    //x
+                &factr,             //x
+                &pgtol,             //x
+                wa.as_mut_ptr(),        //x
                 iwa.as_mut_ptr(),   //x
                 &mut task,          //x
-                &mut iprint,        //x
+                &iprint,            //x
                 csave.as_mut_ptr(), //x
                 lsave.as_mut_ptr(), //x
                 isave.as_mut_ptr(), //x
