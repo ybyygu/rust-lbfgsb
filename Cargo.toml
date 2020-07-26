@@ -2,7 +2,7 @@
 [package]
 name = "lbfgsb"
 edition = "2018"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Wenping Guo <ybyygu@gmail.com>"]
 
 [dependencies]

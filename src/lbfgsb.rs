@@ -1,11 +1,11 @@
-// [[file:~/Workspace/Programming/rust-libs/l-bfgs-b-c/lbfgsb.note::*imports][imports:1]]
+// [[file:../lbfgsb.note::*imports][imports:1]]
 use crate::*;
 use bindings::{FG, FG_END, NEW_X, START};
 
 use anyhow::Result;
 // imports:1 ends here
 
-// [[file:~/Workspace/Programming/rust-libs/l-bfgs-b-c/lbfgsb.note::*util][util:1]]
+// [[file:../lbfgsb.note::*util][util:1]]
 // #define IS_FG(x) ( ((x)>=FG) ?  ( ((x)<=FG_END) ? 1 : 0 ) : 0 )
 fn is_fg(task: i64) -> bool {
     let task = task as u32;
@@ -13,7 +13,7 @@ fn is_fg(task: i64) -> bool {
 }
 // util:1 ends here
 
-// [[file:~/Workspace/Programming/rust-libs/l-bfgs-b-c/lbfgsb.note::*param][param:1]]
+// [[file:../lbfgsb.note::*param][param:1]]
 /// L-BFGS-B algorithm parameters
 pub struct LbfgsbParameter {
     /// On entry m is the maximum number of variable metric corrections allowed
@@ -61,13 +61,13 @@ impl Default for LbfgsbParameter {
             m: 5,
             factr: 1E7,
             pgtol: 1E-5,
-            iprint: 1,
+            iprint: -1,
         }
     }
 }
 // param:1 ends here
 
-// [[file:~/Workspace/Programming/rust-libs/l-bfgs-b-c/lbfgsb.note::*problem][problem:1]]
+// [[file:../lbfgsb.note::*problem][problem:1]]
 pub struct LbfgsbProblem<E>
 where
     E: FnMut(&[f64], &mut [f64]) -> Result<f64>,
@@ -138,7 +138,7 @@ where
 }
 // problem:1 ends here
 
-// [[file:~/Workspace/Programming/rust-libs/l-bfgs-b-c/lbfgsb.note::*state][state:1]]
+// [[file:../lbfgsb.note::*state][state:1]]
 pub struct LbfgsbState<E>
 where
     E: FnMut(&[f64], &mut [f64]) -> Result<f64>,
@@ -330,7 +330,7 @@ where
 }
 // state:1 ends here
 
-// [[file:~/Workspace/Programming/rust-libs/l-bfgs-b-c/lbfgsb.note::*pub][pub:1]]
+// [[file:../lbfgsb.note::*pub][pub:1]]
 /// Minimize a scalar function of one or more variables using the L-BFGS-B
 /// algorithm.
 ///
@@ -346,6 +346,8 @@ pub fn lbfgsb<E>(x: Vec<f64>, bounds: &[(f64, f64)], eval_fn: E) -> Result<Lbfgs
 where
     E: FnMut(&[f64], &mut [f64]) -> Result<f64>,
 {
+    assert_eq!(x.len(), bounds.len());
+
     let param = LbfgsbParameter::default();
     let mut problem = LbfgsbProblem::build(x, eval_fn);
     let bounds = bounds.into_iter().copied().map(|(l, u)| (Some(l), Some(u)));
