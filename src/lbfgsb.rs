@@ -57,6 +57,7 @@ pub struct LbfgsbParameter {
 
 impl Default for LbfgsbParameter {
     fn default() -> Self {
+        // Self { m: 10, factr: 1E7, pgtol: 1E-5, iprint: -1 } SCIKIT
         Self {
             m: 5,
             factr: 1E7,
@@ -350,7 +351,7 @@ where
 
     let param = LbfgsbParameter::default();
     let mut problem = LbfgsbProblem::build(x, eval_fn);
-    let bounds = bounds.into_iter().copied().map(|(l, u)| (Some(l), Some(u)));
+    let bounds = bounds.iter().copied().map(|(l, u)| (Some(l), Some(u)));
     problem.set_bounds(bounds);
 
     let mut state = LbfgsbState::new(problem, param);
