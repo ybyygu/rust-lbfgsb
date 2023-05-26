@@ -10,8 +10,8 @@ anyhow = "1"
 
 [build-dependencies]
 cc = "1"
-bindgen = "0.54"
+bindgen = "0.65.1"
 
 [dev-dependencies]
-vecfx = {version="0.1"}
+vecfx = { version = "0.1" }
 # cargo:1 ends here

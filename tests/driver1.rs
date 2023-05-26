@@ -12,7 +12,7 @@ fn evaluate(x: &[f64], g: &mut [f64]) -> Result<f64> {
     let n = x.len();
     let mut d1 = x[0] - 1.;
     let mut f = d1 * d1 * 0.25;
-    for i in (2..=n) {
+    for i in 2..=n {
         /* Computing 2nd power */
         let d2 = x[i - 2];
         /* Computing 2nd power */
@@ -27,7 +27,7 @@ fn evaluate(x: &[f64], g: &mut [f64]) -> Result<f64> {
     let mut t1 = x[1] - d1 * d1;
     g[0] = (x[0] - 1.) * 2. - x[0] * 16. * t1;
 
-    for i in (2..=n - 1) {
+    for i in 2..=n - 1 {
         let t2 = t1;
         /* Computing 2nd power */
         d1 = x[i - 1];
@@ -62,7 +62,7 @@ fn test_lbfgs() -> Result<()> {
     }
 
     // We now define the starting point.
-    for i in (1..=N) {
+    for i in 1..=N {
         x[i - 1] = 3.;
     }
     println!("     Solving sample problem (Rosenbrock test fcn).");

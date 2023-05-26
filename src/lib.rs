@@ -5,12 +5,12 @@
 mod bindings {
     include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 }
-// pub use bindings::*;
 
 use bindings::{integer, logical};
 
 // update signature to remove mut access from const parameters
 extern "C" {
+    #[allow(clashing_extern_declarations)]
     pub fn setulb(
         n: *const integer,
         m: *const integer,
