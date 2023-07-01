@@ -1,8 +1,8 @@
-# [[file:~/Workspace/Programming/rust-libs/l-bfgs-b-c/lbfgsb.note::*cargo][cargo:1]]
+# [[file:lbfgsb.note::56fdcc09][56fdcc09]]
 [package]
 name = "lbfgsb"
-edition = "2018"
-version = "0.0.2"
+edition = "2021"
+version = "0.1.0"
 authors = ["Wenping Guo <ybyygu@gmail.com>"]
 
 [dependencies]
@@ -14,4 +14,4 @@ bindgen = "0.65.1"
 
 [dev-dependencies]
 vecfx = { version = "0.1" }
-# cargo:1 ends here
+# 56fdcc09 ends here

@@ -1,10 +1,11 @@
-// [[file:~/Workspace/Programming/rust-libs/l-bfgs-b-c/lbfgsb.note::*include][include:1]]
+// [[file:../lbfgsb.note::86501f03][86501f03]]
 #![allow(nonstandard_style)]
 
 #[allow(clippy::all)]
 mod bindings {
     include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 }
+// pub use bindings::*;
 
 use bindings::{integer, logical};
 
@@ -32,13 +33,13 @@ extern "C" {
         dsave: *mut f64,
     ) -> ::std::os::raw::c_int;
 }
-// include:1 ends here
+// 86501f03 ends here
 
-// [[file:~/Workspace/Programming/rust-libs/l-bfgs-b-c/lbfgsb.note::*mods][mods:1]]
+// [[file:../lbfgsb.note::7c3692fa][7c3692fa]]
 mod lbfgsb;
-// mods:1 ends here
+// 7c3692fa ends here
 
-// [[file:~/Workspace/Programming/rust-libs/l-bfgs-b-c/lbfgsb.note::*exports][exports:1]]
+// [[file:../lbfgsb.note::*exports][exports:1]]
 pub use crate::lbfgsb::lbfgsb;
 pub use crate::lbfgsb::LbfgsbState;
 // exports:1 ends here

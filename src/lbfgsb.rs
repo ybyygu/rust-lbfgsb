@@ -57,7 +57,6 @@ pub struct LbfgsbParameter {
 
 impl Default for LbfgsbParameter {
     fn default() -> Self {
-        // Self { m: 10, factr: 1E7, pgtol: 1E-5, iprint: -1 } SCIKIT
         Self {
             m: 5,
             factr: 1E7,
@@ -139,7 +138,7 @@ where
 }
 // problem:1 ends here
 
-// [[file:../lbfgsb.note::*state][state:1]]
+// [[file:../lbfgsb.note::9e5b03b1][9e5b03b1]]
 pub struct LbfgsbState<E>
 where
     E: FnMut(&[f64], &mut [f64]) -> Result<f64>,
@@ -275,6 +274,7 @@ where
         let m = param.m;
         loop {
             unsafe {
+                #[allow(clashing_extern_declarations)]
                 crate::setulb(
                     &(n as i64),             //x
                     &(m as i64),             //x
@@ -329,7 +329,7 @@ where
         &self.problem.x
     }
 }
-// state:1 ends here
+// 9e5b03b1 ends here
 
 // [[file:../lbfgsb.note::*pub][pub:1]]
 /// Minimize a scalar function of one or more variables using the L-BFGS-B
@@ -351,7 +351,7 @@ where
 
     let param = LbfgsbParameter::default();
     let mut problem = LbfgsbProblem::build(x, eval_fn);
-    let bounds = bounds.iter().copied().map(|(l, u)| (Some(l), Some(u)));
+    let bounds = bounds.into_iter().copied().map(|(l, u)| (Some(l), Some(u)));
     problem.set_bounds(bounds);
 
     let mut state = LbfgsbState::new(problem, param);
