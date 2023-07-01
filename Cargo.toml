@@ -3,7 +3,10 @@
 name = "lbfgsb"
 edition = "2021"
 version = "0.1.0"
+description = "Rust wrapper for L-BFGS-B-C, a C version of the L-BFGS-B algorithm by Stephen Becker"
 authors = ["Wenping Guo <ybyygu@gmail.com>"]
+license = "BSD-3.0"
+readme = "README.md"
 
 [dependencies]
 anyhow = "1"
