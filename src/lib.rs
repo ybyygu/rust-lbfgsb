@@ -41,5 +41,7 @@ mod lbfgsb;
 
 // [[file:../lbfgsb.note::*exports][exports:1]]
 pub use crate::lbfgsb::lbfgsb;
+pub use crate::lbfgsb::LbfgsbParameter;
+pub use crate::lbfgsb::LbfgsbProblem;
 pub use crate::lbfgsb::LbfgsbState;
 // exports:1 ends here
