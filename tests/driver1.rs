@@ -44,7 +44,7 @@ fn evaluate(x: &[f64], g: &mut [f64]) -> Result<f64> {
 
 #[test]
 fn test_lbfgs() -> Result<()> {
-    const N: usize = 8;
+    const N: usize = 25;
     let mut x = vec![0f64; N];
 
     // We now provide nbd which defines the bounds on the variables:
