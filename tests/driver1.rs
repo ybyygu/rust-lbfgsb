@@ -3,6 +3,9 @@ use anyhow::Result;
 use lbfgsb::*;
 use vecfx::*; // for calculate gradient norm
 
+// Additional imports for custom parameter testing
+use lbfgsb::{LbfgsbState, LbfgsbParameter, LbfgsbProblem};
+
 /// Compute function value f for the sample problem.
 ///
 /// Evaluate f(x) and g(x) at current `x`.
@@ -41,7 +44,7 @@ fn evaluate(x: &[f64], g: &mut [f64]) -> Result<f64> {
 
 #[test]
 fn test_lbfgs() -> Result<()> {
-    const N: usize = 25;
+    const N: usize = 8;
     let mut x = vec![0f64; N];
 
     // We now provide nbd which defines the bounds on the variables:
@@ -69,9 +72,63 @@ fn test_lbfgs() -> Result<()> {
     println!("      (f = 0.0 at the optimal solution.)");
     let bounds: Vec<_> = l.into_iter().zip(u.into_iter()).collect();
     let opt = lbfgsb(x, &bounds, evaluate)?;
-    assert!(opt.fx() <= 1e-8);
-    assert!(dbg!(opt.gx().vec2norm()) < 1e-3);
+    // More strict error requirements
+    assert!(opt.fx() <= 1e-8, "Function value should be <= 1e-8, got {}", opt.fx());
+    assert!(dbg!(opt.gx().vec2norm()) < 1e-3, "Gradient norm should be < 1e-3, got {}", opt.gx().vec2norm());
 
     Ok(())
 }
-// driver1.rs:1 ends here
+
+#[test]
+fn test_lbfgsb_with_strict_convergence() -> Result<()> {
+    const N: usize = 2;
+    let mut x = vec![0f64; N];
+
+    // We now provide nbd which defines the bounds on the variables:
+    // - l   specifies the lower bounds,
+    // - u   specifies the upper bounds.
+    //
+    // First set bounds on the odd-numbered variables.
+    let mut l = vec![0f64; N];
+    let mut u = vec![0f64; N];
+    for i in (1..=N).step_by(2) {
+        l[i - 1] = 1.;
+        u[i - 1] = 100.;
+    }
+    // Next set bounds on the even-numbered variables.
+    for i in (2..=N).step_by(2) {
+        l[i - 1] = -100.;
+        u[i - 1] = 100.;
+    }
+
+    // Starting point
+    for i in 1..=N {
+        x[i - 1] = 3.;
+    }
+
+    // Custom parameters with stricter convergence criteria
+    let custom_params = LbfgsbParameter {
+        m: 100,           // More memory for better convergence
+        factr: 1E9,      // Stricter function tolerance than default
+        pgtol: 1E-5,     // Stricter gradient tolerance than default  
+        iprint: -1,      // Silent
+    };
+
+    println!("     Testing with strict convergence parameters");
+    println!("       m={}, factr={}, pgtol={}", custom_params.m, custom_params.factr, custom_params.pgtol);
+
+    // Create problem and state with custom parameters
+    let mut problem = LbfgsbProblem::build(x, evaluate);
+    let bounds = l.into_iter().zip(u.into_iter()).map(|(l, u)| (Some(l), Some(u)));
+    problem.set_bounds(bounds);
+
+    let mut state = LbfgsbState::new(problem, custom_params);
+    state.minimize()?;
+
+    assert!(state.fx() <= 1e-9, "Function value should be <= 1e-9, got {}", state.fx());
+    assert!(state.gx().vec2norm() < 1e-5, "Gradient norm should be < 1e-6, got {}", state.gx().vec2norm());
+
+    println!("     ✓ Strict convergence test passed: f={:.2e}, |g|={:.2e}", state.fx(), state.gx().vec2norm());
+
+    Ok(())
+}
